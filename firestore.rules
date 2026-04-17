@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      // Bootstrapped admin Email or check for admin role in users collection
+      return isSignedIn() && (
+        request.auth.token.email == 'belizairefrantzly152@gmail.com' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Entity Validations ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['nom', 'email', 'phone', 'role', 'createdAt']) &&
+             data.keys().size() == 5 &&
+             data.nom is string && data.nom.size() <= 200 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.phone is string && data.phone.size() <= 20 &&
+             data.role in ['user', 'admin'] &&
+             data.createdAt == request.time;
+    }
+
+    function isValidCourse(data) {
+      return data.keys().hasAll(['titre', 'description', 'prix', 'category']) &&
+             data.keys().size() == 4 &&
+             data.titre is string && data.titre.size() <= 200 &&
+             data.description is string && data.description.size() <= 2000 &&
+             data.prix is number && data.prix >= 0 &&
+             data.category is string;
+    }
+
+    function isValidPayment(data) {
+      return data.keys().hasAll(['userId', 'courseId', 'montant', 'methode', 'numero', 'codeTransaction', 'statut', 'createdAt', 'updatedAt']) &&
+             data.keys().size() == 9 &&
+             data.userId == request.auth.uid &&
+             data.courseId is string &&
+             data.montant is number && data.montant > 0 &&
+             data.methode in ['MonCash', 'NatCash'] &&
+             data.numero is string && data.numero.size() <= 20 &&
+             data.codeTransaction is string && data.codeTransaction.size() <= 100 &&
+             data.statut == 'pending' &&
+             data.createdAt == request.time &&
+             data.updatedAt == request.time;
+    }
+
+    // --- Collections ---
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'user';
+      allow update: if (isOwner(userId) && 
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nom', 'phone']) &&
+                       request.resource.data.nom is string && request.resource.data.phone is string) ||
+                      isAdmin();
+    }
+
+    match /courses/{courseId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /payments/{paymentId} {
+      allow get: if isOwner(resource.data.userId) || isAdmin();
+      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isSignedIn() && isValidPayment(request.resource.data);
+      allow update: if isAdmin() && 
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['statut', 'updatedAt']) &&
+                      request.resource.data.statut in ['validated', 'refused'] &&
+                      request.resource.data.updatedAt == request.time;
+      allow delete: if false; // Payments are never deleted
+    }
+  }
+}

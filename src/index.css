@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-blue: #1e40af;
+  --color-brand-light: #f8fafc;
+}
+
+@layer base {
+  body {
+    @apply bg-brand-light text-slate-900;
+  }
+}
+
+.auth-card {
+  @apply bg-white p-8 rounded-2xl shadow-xl max-w-md w-full;
+}
+
+.btn-primary {
+  @apply bg-brand-blue text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50;
+}
+
+.btn-secondary {
+  @apply border border-brand-blue text-brand-blue px-6 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors;
+}
+

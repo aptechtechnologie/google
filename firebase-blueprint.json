@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "nom": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["nom", "email", "phone", "role"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "Course information",
+      "type": "object",
+      "properties": {
+        "titre": { "type": "string" },
+        "description": { "type": "string" },
+        "prix": { "type": "number" },
+        "category": { "type": "string" }
+      },
+      "required": ["titre", "description", "prix"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Payment information for course registration",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "courseId": { "type": "string" },
+        "montant": { "type": "number" },
+        "methode": { "type": "string", "enum": ["MonCash", "NatCash"] },
+        "numero": { "type": "string" },
+        "codeTransaction": { "type": "string" },
+        "statut": { "type": "string", "enum": ["pending", "validated", "refused"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "courseId", "montant", "methode", "numero", "codeTransaction", "statut"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "courses/{courseId}": {
+      "schema": "Course",
+      "description": "Available courses"
+    },
+    "payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Course payments"
+    }
+  }
+}
